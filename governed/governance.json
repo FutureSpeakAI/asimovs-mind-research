@@ -1,0 +1,98 @@
+{
+  "$schema": "https://asimovs-mind.dev/governance/ml-research/v1",
+  "name": "Governed ML Research — Asimov's Mind",
+  "description": "Safety constraints for autonomous ML experimentation. Applied to the agent's decision-making, NOT to the training code itself.",
+
+  "laws": {
+    "first": {
+      "name": "Do No Harm to Training",
+      "enforcement": {
+        "catastrophic_loss_threshold": 100.0,
+        "nan_detection": true,
+        "max_vram_increase_ratio": 2.0,
+        "max_val_bpb_regression": 0.5,
+        "forbidden_modifications": [
+          "prepare.py",
+          "governed/",
+          "pyproject.toml"
+        ]
+      }
+    },
+    "second": {
+      "name": "Obey Experimental Protocol",
+      "enforcement": {
+        "editable_file": "train.py",
+        "editable_zones": {
+          "hyperparameters": {
+            "lines": "432-451",
+            "description": "Model architecture and optimization hyperparameters",
+            "parameters": {
+              "ASPECT_RATIO": { "min": 16, "max": 256, "type": "int" },
+              "HEAD_DIM": { "min": 32, "max": 256, "type": "int" },
+              "TOTAL_BATCH_SIZE": { "min": 32768, "max": 2097152, "type": "power_of_2" },
+              "EMBEDDING_LR": { "min": 0.001, "max": 5.0, "type": "float" },
+              "UNEMBEDDING_LR": { "min": 0.0001, "max": 0.1, "type": "float" },
+              "MATRIX_LR": { "min": 0.001, "max": 0.5, "type": "float" },
+              "SCALAR_LR": { "min": 0.01, "max": 5.0, "type": "float" },
+              "WEIGHT_DECAY": { "min": 0.0, "max": 1.0, "type": "float" },
+              "WARMUP_RATIO": { "min": 0.0, "max": 0.3, "type": "float" },
+              "WARMDOWN_RATIO": { "min": 0.0, "max": 1.0, "type": "float" },
+              "DEPTH": { "min": 2, "max": 24, "type": "int" },
+              "DEVICE_BATCH_SIZE": { "min": 4, "max": 256, "type": "int" }
+            }
+          },
+          "model_architecture": {
+            "lines": "32-292",
+            "description": "GPT model definition — architecture modifications allowed"
+          },
+          "optimizer": {
+            "lines": "294-425",
+            "description": "Optimizer implementations — modifications allowed"
+          },
+          "schedules": {
+            "lines": "518-532",
+            "description": "LR, momentum, and weight decay schedules"
+          }
+        },
+        "time_budget_seconds": 300,
+        "max_experiments_per_session": 100
+      }
+    },
+    "third": {
+      "name": "Preserve Experimental Progress",
+      "enforcement": {
+        "commit_on_improvement": true,
+        "revert_on_regression": true,
+        "log_to_results_tsv": true,
+        "never_modify_results_tsv_retroactively": true
+      }
+    }
+  },
+
+  "circuit_breakers": [
+    { "condition": "val_bpb is NaN", "action": "revert and skip" },
+    { "condition": "val_bpb > baseline * 1.5", "action": "revert — catastrophic regression" },
+    { "condition": "peak_vram_mb > baseline_vram * 2.0", "action": "revert — VRAM explosion" },
+    { "condition": "training crashed (exit code != 0)", "action": "revert, attempt fix once, then skip" },
+    { "condition": "5 consecutive experiments with no improvement", "action": "pause and diversify strategy" }
+  ],
+
+  "multi_agent_zones": {
+    "description": "When multiple agents collaborate, each has a constrained zone within train.py",
+    "architect": {
+      "zone": "model_architecture",
+      "can_modify": ["GPTConfig", "GPT class", "CausalSelfAttention", "MLP", "TransformerBlock"],
+      "cannot_modify": ["hyperparameters", "optimizer", "training_loop"]
+    },
+    "hypertuner": {
+      "zone": "hyperparameters",
+      "can_modify": ["ASPECT_RATIO through DEVICE_BATCH_SIZE"],
+      "cannot_modify": ["model_architecture", "optimizer_implementation"]
+    },
+    "regularizer": {
+      "zone": "optimizer + schedules",
+      "can_modify": ["optimizer parameters", "schedule functions", "weight decay"],
+      "cannot_modify": ["model_architecture", "hyperparameters"]
+    }
+  }
+}
