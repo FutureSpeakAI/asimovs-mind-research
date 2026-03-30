@@ -1,0 +1,150 @@
+{
+  "$schema": "https://asimovs-mind.dev/governance/discovery/v1",
+  "name": "Asimov's cLaws — Discovery Governance Extension",
+  "description": "Extends governance.json with rules for autonomous code discovery from GitHub. These constraints protect the codebase when AI agents import external code.",
+  "version": "2.0.0",
+
+  "extends": "governance.json",
+
+  "laws_extended": {
+    "first": {
+      "name": "Do No Harm — Code Import Extension",
+      "description": "Imported code must not compromise codebase integrity, security, or stability.",
+      "enforcement": {
+        "hard_blocks": [
+          "Code that fails safety_scanner with ANY Tier 1 finding",
+          "Code from repos with no license",
+          "Code that requires blocked imports (dependency conflicts)",
+          "Code that modifies torch internals at module scope",
+          "Code that executes side effects at import time (network, filesystem, subprocess)"
+        ],
+        "post_adaptation_rescan": true,
+        "max_imports_per_session": 3,
+        "max_lines_per_import": 200,
+        "no_execution_guarantee": "Imported code runs ONLY via 'uv run train.py' — never via eval/exec/importlib"
+      }
+    },
+    "second": {
+      "name": "Obey Protocol — Discovery Protocol Extension",
+      "description": "The discovery pipeline must be followed in order. No shortcuts.",
+      "enforcement": {
+        "required_pipeline_order": [
+          "scout (search GitHub)",
+          "safety_scanner (AST analysis)",
+          "adapter (extract and transform)",
+          "safety_scanner (post-adaptation rescan)",
+          "provenance (record candidate)",
+          "insert into train.py",
+          "git commit with attribution",
+          "run experiment",
+          "provenance (record outcome)"
+        ],
+        "forbidden_modifications": [
+          "governed/discovery/",
+          "governed/governance.json",
+          "governed/governance_v2.json",
+          "governed/discovery/provenance_log.jsonl",
+          "prepare.py",
+          "pyproject.toml"
+        ],
+        "editable_file": "train.py",
+        "provenance_log_is_append_only": true
+      }
+    },
+    "third": {
+      "name": "Preserve Progress — Attribution Extension",
+      "description": "Every import must have full provenance. The history is never erased.",
+      "enforcement": {
+        "three_stage_provenance": ["candidate", "experiment", "outcome"],
+        "all_stages_required_for_kept_imports": true,
+        "reverted_imports_still_get_outcome_record": true,
+        "attribution_comment_required_in_train_py": true,
+        "license_violation_requires_immediate_revert": true
+      }
+    }
+  },
+
+  "trust_tiers": {
+    "tier_1_verified": {
+      "description": "Known ML research repos from established labs or core contributors",
+      "min_scout_trust": 0.85,
+      "min_scanner_trust": 0.70,
+      "max_code_lines": 200,
+      "quarantine_required": false,
+      "approved_prefixes": [
+        "karpathy/",
+        "kellerjordan/",
+        "tysam-code/",
+        "pytorch-labs/",
+        "google-deepmind/",
+        "EleutherAI/",
+        "huggingface/",
+        "YouJiacheng/",
+        "FutureSpeakAI/"
+      ]
+    },
+    "tier_2_community": {
+      "description": "Community ML repos with open license, multiple contributors, >100 stars",
+      "min_scout_trust": 0.65,
+      "min_scanner_trust": 0.75,
+      "max_code_lines": 150,
+      "quarantine_required": true,
+      "quarantine_experiments": 1
+    },
+    "tier_3_experimental": {
+      "description": "Single-author or low-star repos with open license",
+      "min_scout_trust": 0.50,
+      "min_scanner_trust": 0.85,
+      "max_code_lines": 100,
+      "quarantine_required": true,
+      "quarantine_experiments": 2
+    }
+  },
+
+  "quarantine": {
+    "description": "Tighter thresholds during quarantine period for newly imported code",
+    "vram_regression_ratio": 1.25,
+    "bpb_regression_threshold": 0.10,
+    "crash_action": "revert_immediately"
+  },
+
+  "scanner_config": {
+    "min_trust_score": 0.70,
+    "max_file_size_bytes": 102400,
+    "max_dependency_depth": 3,
+    "module_allowlist": [
+      "torch", "torch.nn", "torch.nn.functional", "torch.optim",
+      "torch.cuda", "torch.amp",
+      "math", "os", "sys", "time", "typing", "dataclasses",
+      "functools", "itertools", "collections", "abc", "copy",
+      "warnings", "contextlib", "pathlib", "re", "string",
+      "struct", "io", "enum", "gc", "platform", "numpy"
+    ],
+    "module_blocklist": [
+      "requests", "urllib", "http", "socket", "subprocess",
+      "multiprocessing", "threading", "ctypes", "cffi",
+      "importlib", "shutil", "tempfile", "signal"
+    ]
+  },
+
+  "scout_config": {
+    "min_relevance_score": 0.35,
+    "min_trust_score": 0.50,
+    "max_candidates_per_strategy": 10,
+    "github_token_env_var": "GITHUB_TOKEN",
+    "search_strategies": ["optimizer", "attention", "training_trick", "normalization"]
+  },
+
+  "provenance": {
+    "log_file": "governed/discovery/provenance_log.jsonl",
+    "require_license": true,
+    "blocked_licenses": ["no-license", "proprietary", "all-rights-reserved"],
+    "copyleft_warn": ["GPL-2.0-only", "GPL-3.0-only", "LGPL-2.1-only", "LGPL-3.0-only"],
+    "allowed_licenses": [
+      "MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause",
+      "ISC", "CC-BY-4.0", "Unlicense", "0BSD"
+    ]
+  },
+
+  "discovery_enabled": false
+}

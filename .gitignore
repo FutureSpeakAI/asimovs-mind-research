@@ -21,3 +21,12 @@ dev/
 
 # Results file
 results.tsv
+
+# Discovery runtime artifacts (append-only logs, not versioned)
+governed/discovery/provenance_log.jsonl
+governed/discovery/quarantine_registry.json
+
+# Experiment runner logs and results
+governed/results/logs/
+governed/results/all_results.tsv
+run.log

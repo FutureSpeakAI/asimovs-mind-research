@@ -1,0 +1,9 @@
+experiment	commit	val_bpb	peak_vram_mb	status	description	source
+1	09f893a	1.819910	8458.5	keep	Narrow AR 48	round1_C.tsv
+2	17b5d57	1.829617	8458.5	discard	Matrix LR 0.06	round1_C.tsv
+3	f2604cb	0.0	0.0	keep	Weight decay 0.1	git_branch
+4	9538475	0.0	0.0	keep	Embedding LR 1.0	git_branch
+5	reverted	0.000000	0.0	crash	Warmup 5pct	condition_C.tsv
+6	reverted	0.000000	0.0	crash	Wide AR 80	condition_C.tsv
+7	5a53ccd	0.0	0.0	keep	Matrix LR 0.02	git_branch
+8	3245f82	0.0	0.0	keep	Warmdown 70pct	git_branch

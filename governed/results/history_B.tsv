@@ -1,0 +1,10 @@
+experiment	commit	val_bpb	peak_vram_mb	status	description	source
+1	reverted	0.000000	0.0	crash	Double matrix LR	round1_B.tsv
+2	fff6cdc	0.0	0.0	keep	Matrix LR 0.02	git_branch
+3	048ffc7	0.0	0.0	keep	Weight decay 0.1	git_branch
+4	6f42640	0.0	0.0	keep	Warmup 10pct	git_branch
+5	reverted	0.000000	0.0	crash	Warmdown 70pct	condition_B.tsv
+6	5cb344a	0.0	0.0	keep	Embedding LR 1.0	git_branch
+7	2e51fab	0.0	0.0	keep	Embedding LR 0.3	git_branch
+8	43b2860	0.0	0.0	keep	No weight decay	git_branch
+9	9f7920d	0.0	0.0	keep	Scalar LR 1.0	git_branch
